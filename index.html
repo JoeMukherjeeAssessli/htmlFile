@@ -1,0 +1,552 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dance - Short-Video Search</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #212121;
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+            --accent: #3ea6ff;
+            --border: #303030;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 40px;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        header .meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .topic-section {
+            margin-bottom: 60px;
+        }
+        
+        .topic-section h2 {
+            font-size: 1.5rem;
+            padding: 15px 0;
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .topic-section h2 .count {
+            background: var(--accent);
+            color: var(--bg-primary);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        
+        .result-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card-media {
+            position: relative;
+            padding-top: 56.25%; /* 16:9 aspect ratio */
+            background: var(--bg-secondary);
+            overflow: hidden;
+        }
+        
+        .card-media img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .card-media iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        .card-media .duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .card-media .play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .result-card:hover .play-overlay {
+            opacity: 1;
+        }
+        
+        .play-overlay::after {
+            content: '';
+            border-style: solid;
+            border-width: 10px 0 10px 18px;
+            border-color: transparent transparent transparent white;
+            margin-left: 4px;
+        }
+        
+        .card-content {
+            padding: 15px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-content h3 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .card-content h3 a {
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+        
+        .card-content h3 a:hover {
+            color: var(--accent);
+        }
+        
+        .card-content .snippet {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex: 1;
+        }
+        
+        .card-content .meta {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .card-content .source {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .card-content .source-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge-video { background: #ff0000; color: white; }
+        .badge-image { background: #00a67e; color: white; }
+        .badge-article { background: #1da1f2; color: white; }
+        .badge-news { background: #ff6600; color: white; }
+        .badge-web { background: #666; color: white; }
+        
+        /* News/Article card enhancements */
+        .news-card .card-content {
+            padding: 20px;
+        }
+        
+        .news-card .headline {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        .news-card .headline a {
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .news-card .headline a:hover {
+            color: var(--accent);
+        }
+        
+        .news-card .article-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        
+        .news-card .article-meta .author {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .news-card .article-meta .date {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .news-card .description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .news-card .card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+        
+        .btn-primary:hover {
+            background: #5bb8ff;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+        
+        .btn svg {
+            width: 14px;
+            height: 14px;
+        }
+        
+        /* Image lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .lightbox.active {
+            display: flex;
+        }
+        
+        .lightbox img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+        
+        .lightbox .close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* No results message */
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .no-results svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>dance - Short-Video Search</h1>
+            <p class="meta">
+                Generated on 2025-11-29 14:31:12 | 
+                2 results | 
+                Search type: short-video
+            </p>
+        </header>
+        
+        
+        <section class="topic-section">
+            <h2>
+                dance
+                <span class="count">2 results</span>
+            </h2>
+            
+            
+            <div class="results-grid">
+                
+                
+                
+                
+                <div class="result-card" data-type="video">
+                    <div class="card-media">
+                        
+                            <iframe 
+                                width="560" 
+                                height="315" 
+                                src="https://www.instagram.com/reel/DP1gjH6AcAW/embed" 
+                                title="Mom's Tribute: A Dance of Love and Gratitude for Single Parents"
+                                frameborder="0"
+                                loading="lazy"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen>
+                            </iframe>
+                        
+                    </div>
+                    
+                    <div class="card-content">
+                        <h3>
+                            <a href="https://www.instagram.com/reel/DP1gjH6AcAW/" target="_blank" rel="noopener">
+                                Mom's Tribute: A Dance of Love and Gratitude for Single Parents
+                            </a>
+                        </h3>
+                        <p class="snippet">Oct 15, 2025 ... Our last dance was a really special freestyle. Witney captured the essence of our time on the show, and created a performance to celebrate everything that led ...</p>
+                        <div class="meta">
+                            <div class="source">
+                                <img class="source-icon" 
+                                     src="https://www.google.com/s2/favicons?domain=www.instagram.com&sz=32" 
+                                     alt="">
+                                www.instagram.com
+                            </div>
+                            <span class="badge badge-video">
+                                video
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                
+                
+                
+                
+                <div class="result-card" data-type="video">
+                    <div class="card-media">
+                        
+                            <iframe 
+                                width="560" 
+                                height="315" 
+                                src="https://www.instagram.com/reel/DRcoQZ4D4Hb/embed" 
+                                title="Robert, when you dance for the final time tomorrow, I will be holding ..."
+                                frameborder="0"
+                                loading="lazy"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowfullscreen>
+                            </iframe>
+                        
+                    </div>
+                    
+                    <div class="card-content">
+                        <h3>
+                            <a href="https://www.instagram.com/reel/DRcoQZ4D4Hb/" target="_blank" rel="noopener">
+                                Robert, when you dance for the final time tomorrow, I will be holding ...
+                            </a>
+                        </h3>
+                        <p class="snippet">5 days ago ... You were the boy full of wonder and adventure, with such compassion for every creature. Your father's son. This journey of dance will shape your life forever.</p>
+                        <div class="meta">
+                            <div class="source">
+                                <img class="source-icon" 
+                                     src="https://www.google.com/s2/favicons?domain=www.instagram.com&sz=32" 
+                                     alt="">
+                                www.instagram.com
+                            </div>
+                            <span class="badge badge-video">
+                                video
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                
+            </div>
+            
+        </section>
+        
+        
+        <footer>
+            <p>Powered by Google Custom Search API</p>
+            <p>Total API requests: 1</p>
+        </footer>
+    </div>
+    
+    <!-- Lightbox for images -->
+    <div class="lightbox" id="lightbox">
+        <span class="close" onclick="closeLightbox()">&times;</span>
+        <img src="" alt="" id="lightbox-img">
+    </div>
+    
+    <script>
+        // Lightbox functionality
+        function openLightbox(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox').classList.add('active');
+        }
+        
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+        
+        document.getElementById('lightbox').addEventListener('click', function(e) {
+            if (e.target === this) closeLightbox();
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLightbox();
+        });
+        
+        // Make image cards clickable for lightbox
+        document.querySelectorAll('.result-card[data-type="image"] .card-media img').forEach(img => {
+            img.style.cursor = 'zoom-in';
+            img.addEventListener('click', function(e) {
+                e.preventDefault();
+                openLightbox(this.src);
+            });
+        });
+    </script>
+</body>
+</html>
